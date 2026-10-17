@@ -43,9 +43,32 @@ main{padding:28px clamp(16px,3vw,42px);max-width:1500px;width:100%;margin:auto}.
 .fin-filter-row{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
 @media(max-width:1000px){.fin-goals{grid-template-columns:1fr}}
 @media(max-width:700px){.app{grid-template-columns:minmax(0,1fr)}.sidebar,.nav,main{min-width:0}.sidebar{max-width:100vw}.nav{max-width:100%;overflow-x:auto}.fin-stats .stat{min-height:135px}.fin-item{gap:8px;padding:10px}.fin-details strong{font-size:12px}.fin-amount{font-size:12px}.fin-action{margin-right:0}.finance-controls{align-items:stretch}.fin-goals{grid-template-columns:1fr}.fin-filter-row{align-items:stretch}.fin-filter-row .btn{flex:1}}
+
+/* Private authenticated workspace */
+body:not(.authenticated)>.app{display:none!important}
+.auth-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:radial-gradient(600px 400px at 70% 0%,#40307866,transparent 80%)}
+body.authenticated>.auth-screen{display:none!important}
+.auth-card{width:min(420px,100%);padding:32px;background:linear-gradient(145deg,#171f36,#0e1628);border:1px solid #394269;border-radius:24px;box-shadow:0 25px 70px #0007}
+.auth-mark{width:56px;height:56px;border-radius:17px;background:linear-gradient(135deg,#8b7cff,#5d9bff);display:grid;place-items:center;font-size:29px;font-weight:900;margin-bottom:20px}
+.auth-card h1{font-size:26px;margin:0 0 8px}.auth-card p{color:var(--muted);font-size:13px;line-height:1.9;margin:0 0 22px}
+.auth-card label{display:block;font-size:12px;color:#ccd5ea;margin:14px 0 7px}
+.auth-card .btn{width:100%;margin-top:20px;padding:13px}
+.auth-msg{min-height:24px;color:#b8c3df;font-size:12px;line-height:1.8;margin-top:13px!important}
+.cloud-account{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.cloud-status{font-size:11px;color:#a6dfca;border:1px solid #38695c;background:#15372e56;border-radius:9px;padding:8px 10px;max-width:235px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.account-label{font-size:11px;color:var(--muted);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media(max-width:700px){.auth-card{padding:23px}.cloud-status{max-width:150px}.account-label{max-width:150px}}
 </style>
 </head>
 <body>
+<div class="auth-screen" id="authScreen"><div class="auth-card">
+  <div class="auth-mark">م</div><h1>مساحة مهامي</h1>
+  <p>مساحتك الخاصة لتنظيم الحياة والعمل والمال. سجّل الدخول للوصول إلى بياناتك المتزامنة بأمان.</p>
+  <form id="loginForm"><label for="loginEmail">البريد الإلكتروني</label><input class="field" type="email" id="loginEmail" autocomplete="username" required placeholder="name@example.com">
+  <label for="loginPassword">كلمة المرور</label><input class="field" id="loginPassword" type="password" autocomplete="current-password" required placeholder="••••••••">
+  <button class="btn btn-primary" id="loginButton" type="submit">تسجيل الدخول بأمان</button></form>
+  <p class="auth-msg" id="loginMessage">جارٍ الاتصال بخدمة تسجيل الدخول…</p>
+  <p style="font-size:11px;margin-bottom:0">حساب شخصي خاص • لا يوجد تسجيل مستخدمين جدد من الموقع</p>
+</div></div>
 <div class="app">
 <aside class="sidebar">
   <div class="brand"><div class="brand-icon">م</div><div><h1>مساحة مهامي</h1><small>خطّط. أنجز. تقدّم.</small></div></div>
@@ -60,7 +83,7 @@ main{padding:28px clamp(16px,3vw,42px);max-width:1500px;width:100%;margin:auto}.
   <div class="side-bottom"><strong>✦ مساحة تركيزك</strong><p>رتّب أولوياتك، قسّم المشاريع إلى خطوات صغيرة، واحتفل بكل إنجاز.</p></div>
 </aside>
 <main>
-  <header class="topbar"><div><div class="eyebrow" id="todayLabel">مساحة هادئة لإنجاز أكثر</div><h2 id="pageTitle">صباح الإنجاز 👋</h2><p id="pageSubtitle">إليك نظرة سريعة على يومك. خطوة صغيرة تصنع فرقاً.</p></div><div class="top-actions"><button class="btn btn-quiet" id="exportBtn">↓ تصدير نسخة</button><button class="btn btn-quiet" id="importBtn">↑ استيراد نسخة</button><input id="importFile" type="file" accept=".json,application/json" style="display:none"><button class="btn btn-primary" id="addTaskBtn">＋ مهمة جديدة</button></div></header>
+  <header class="topbar"><div><div class="eyebrow" id="todayLabel">مساحة هادئة لإنجاز أكثر</div><h2 id="pageTitle">صباح الإنجاز 👋</h2><p id="pageSubtitle">إليك نظرة سريعة على يومك. خطوة صغيرة تصنع فرقاً.</p></div><div class="top-actions"><div class="cloud-account"><span class="cloud-status" id="cloudStatus">جارٍ الاتصال…</span><button class="btn btn-quiet" id="retrySyncBtn" title="تحديث المزامنة">↻</button><span class="account-label" id="accountLabel"></span><button class="btn btn-quiet" id="logoutBtn">خروج</button></div><button class="btn btn-quiet" id="exportBtn">↓ تصدير نسخة</button><button class="btn btn-quiet" id="importBtn">↑ استيراد نسخة</button><input id="importFile" type="file" accept=".json,application/json" style="display:none"><button class="btn btn-primary" id="addTaskBtn">＋ مهمة جديدة</button></div></header>
   <section id="dashboardView">
     <div class="stats">
       <div class="stat" style="--glow:#8b7cff"><div class="stat-head"><span>إجمالي المهام المفتوحة</span><span class="stat-icon">☷</span></div><div class="stat-num" id="statOpen">0</div><div class="stat-note">مهام تنتظر إنجازك</div></div>
@@ -106,7 +129,7 @@ main{padding:28px clamp(16px,3vw,42px);max-width:1500px;width:100%;margin:auto}.
     <p class="fin-footnote">تنبيه: تُعرض كل عملة على حدة من دون تحويل أو جمع بين الليرة والدولار. مبالغ الادخار داخل الأهداف تُتابع يدوياً ولا تُخصم تلقائياً من صافي الشهر.</p>
   </section>
   <section id="notesView" class="section-hidden"><h2 class="view-title">دفتر الملاحظات</h2><p class="view-subtitle">مساحة سريعة للأفكار، النقاط المهمة، أو أي شيء لا تريد نسيانه.</p><div class="panel"><div class="panel-head"><div><h3>ملاحظاتي</h3><p>تُحفظ تلقائياً على هذا الجهاز.</p></div><span style="color:var(--accent2);font-size:12px" id="noteSaved">محفوظ محلياً</span></div><textarea id="notesText" class="notes-box" placeholder="اكتب أفكارك هنا…"></textarea><div style="display:flex;justify-content:space-between;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap"><span style="color:var(--muted);font-size:11px">نصيحة: لا تكتب كلمات مرور أو معلومات حساسة هنا.</span><button class="btn btn-quiet" id="clearNotes">مسح الملاحظات</button></div></div></section>
-  <p class="footer-note">مساحة مهامي · نسخة محلية تجريبية · بياناتك محفوظة في متصفح هذا الجهاز</p>
+  <p class="footer-note">مساحة مهامي · حساب خاص · بياناتك متزامنة مع Supabase</p>
 </main>
 </div>
 <div class="modal-backdrop" id="taskModal"><div class="modal"><h3 id="taskModalTitle">مهمة جديدة</h3><p class="hint">اكتب التفاصيل الأساسية، ويمكنك تعديلها لاحقاً.</p><form id="taskForm"><input type="hidden" id="taskId"><div class="form-grid">
@@ -152,7 +175,7 @@ const defaultProjects=[{id:'work',name:'مهام العمل',desc:'المهام 
 let tasks=[],projects=[],notes='',transactions=[],financeGoals=[],financeBudgets={},view='dashboard',calendarDate=new Date(),toastTimer;
 try{tasks=JSON.parse(localStorage.getItem('mt_tasks')||'[]');projects=JSON.parse(localStorage.getItem('mt_projects')||'null')||defaultProjects;notes=localStorage.getItem('mt_notes')||'';transactions=JSON.parse(localStorage.getItem('mt_fin_transactions')||'[]');financeGoals=JSON.parse(localStorage.getItem('mt_fin_goals')||'[]');financeBudgets=JSON.parse(localStorage.getItem('mt_fin_budgets')||'{}')}catch(e){tasks=[];projects=defaultProjects;notes='';transactions=[];financeGoals=[];financeBudgets={}}
 if(!Array.isArray(tasks))tasks=[];if(!Array.isArray(projects)||!projects.length)projects=defaultProjects;if(!Array.isArray(transactions))transactions=[];if(!Array.isArray(financeGoals))financeGoals=[];if(!financeBudgets||typeof financeBudgets!=='object'||Array.isArray(financeBudgets))financeBudgets={};
-function save(){try{localStorage.setItem('mt_tasks',JSON.stringify(tasks));localStorage.setItem('mt_projects',JSON.stringify(projects));localStorage.setItem('mt_notes',notes);localStorage.setItem('mt_fin_transactions',JSON.stringify(transactions));localStorage.setItem('mt_fin_goals',JSON.stringify(financeGoals));localStorage.setItem('mt_fin_budgets',JSON.stringify(financeBudgets))}catch(e){toast('تعذّر الحفظ المحلي. قد تكون مساحة المتصفح ممتلئة.');}}
+function save(){try{localStorage.setItem('mt_tasks',JSON.stringify(tasks));localStorage.setItem('mt_projects',JSON.stringify(projects));localStorage.setItem('mt_notes',notes);localStorage.setItem('mt_fin_transactions',JSON.stringify(transactions));localStorage.setItem('mt_fin_goals',JSON.stringify(financeGoals));localStorage.setItem('mt_fin_budgets',JSON.stringify(financeBudgets))}catch(e){toast('تعذّر الحفظ المحلي. قد تكون مساحة المتصفح ممتلئة.');}if(window.mahamSyncOnSave)window.mahamSyncOnSave();}
 function toast(msg){$('toast').textContent=msg;$('toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('show'),2500)}
 function openModal(id){$(id).classList.add('open')}
 function closeModal(id){$(id).classList.remove('open')}
@@ -188,7 +211,7 @@ $('importFile').addEventListener('change',async e=>{
  try{
   const data=JSON.parse(await file.text());
   if(!data||!Array.isArray(data.tasks)||!Array.isArray(data.projects)||typeof data.notes!=='string'||(data.transactions!==undefined&&!Array.isArray(data.transactions))||(data.financeGoals!==undefined&&!Array.isArray(data.financeGoals))||(data.financeBudgets!==undefined&&(!data.financeBudgets||typeof data.financeBudgets!=='object'||Array.isArray(data.financeBudgets))))throw new Error('ملف غير متوافق');
-  if(!confirm('استيراد النسخة الاحتياطية سيستبدل جميع المهام والمصاريف والخطط الحالية في هذا المتصفح. هل تريد المتابعة؟'))return;
+  if(!confirm('استيراد النسخة الاحتياطية سيستبدل البيانات الحالية ثم يزامنها مع السحابة. هل تريد المتابعة؟'))return;
   tasks=data.tasks;projects=data.projects;notes=data.notes;transactions=data.transactions||[];financeGoals=data.financeGoals||[];financeBudgets=data.financeBudgets||{};
   save();$('notesText').value=notes;render();toast('تم استيراد البيانات بنجاح');
  }catch(err){toast('فشل الاستيراد: تأكد من صحة ملف النسخة الاحتياطية')}
@@ -241,8 +264,14 @@ document.body.addEventListener('click',e=>{const b=e.target.closest('[data-edit-
  if(b.dataset.delGoal){const g=financeGoals.find(x=>x.id===b.dataset.delGoal);if(g&&confirm(`حذف الخطة «${g.title}»؟`)){financeGoals=financeGoals.filter(x=>x.id!==g.id);save();renderFinance();toast('تم حذف الخطة')}}
 });
 
+window.mahamSyncAPI={
+ snapshot:()=>({tasks,projects,notes,transactions,financeGoals,financeBudgets}),
+ apply:d=>{tasks=d.tasks||[];projects=d.projects?.length?d.projects:defaultProjects;notes=d.notes||'';transactions=d.transactions||[];financeGoals=d.financeGoals||[];financeBudgets=d.financeBudgets||{};$('notesText').value=notes;render();}
+};
 $('todayLabel').textContent=new Date().toLocaleDateString('ar',{weekday:'long',day:'numeric',month:'long',year:'numeric'});render();
 })();
 </script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="./cloud.js"></script>
 </body>
 </html>
