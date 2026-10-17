@@ -57,17 +57,55 @@ body.authenticated>.auth-screen{display:none!important}
 .cloud-account{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.cloud-status{font-size:11px;color:#a6dfca;border:1px solid #38695c;background:#15372e56;border-radius:9px;padding:8px 10px;max-width:235px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .account-label{font-size:11px;color:var(--muted);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @media(max-width:700px){.auth-card{padding:23px}.cloud-status{max-width:150px}.account-label{max-width:150px}}
+
+.auth-screen{position:relative;overflow:hidden}
+.auth-screen:before,.auth-screen:after{content:"";position:absolute;border-radius:999px;filter:blur(4px);opacity:.35;pointer-events:none}
+.auth-screen:before{width:320px;height:320px;background:#8b7cff1c;top:-110px;right:-80px}
+.auth-screen:after{width:260px;height:260px;background:#39c6b21c;bottom:-90px;left:-60px}
+.auth-shell{width:min(1120px,100%);display:grid;grid-template-columns:minmax(320px,1.1fr) minmax(320px,.9fr);gap:26px;align-items:center;position:relative;z-index:1}
+.auth-hero{background:linear-gradient(145deg,#131c30,#0e1628);border:1px solid #394269;border-radius:28px;padding:28px 28px 18px;box-shadow:0 25px 70px #0005;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:640px;position:relative;overflow:hidden}
+.auth-hero:before{content:"";position:absolute;inset:auto auto -120px -60px;width:260px;height:260px;background:radial-gradient(circle,#8b7cff26 0%,transparent 70%);border-radius:50%}
+.auth-hero:after{content:"";position:absolute;inset:18px 18px auto auto;width:110px;height:110px;background:radial-gradient(circle,#39c6b220 0%,transparent 72%);border-radius:50%}
+.auth-kicker{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;background:#ffffff0c;border:1px solid #ffffff14;color:#d8e0f4;font-size:12px;font-weight:700;backdrop-filter:blur(8px);margin-bottom:18px}
+.auth-kicker:before{content:"🐾"}
+.auth-hero-copy{max-width:420px;text-align:center;position:relative;z-index:1}
+.auth-hero-copy h2{margin:0 0 10px;font-size:30px;line-height:1.35}
+.auth-hero-copy p{margin:0;color:#b6c4de;font-size:14px;line-height:1.95}
+.auth-hero-figure{position:relative;display:flex;align-items:center;justify-content:center;flex:1;width:100%;z-index:1;padding:8px 0 0}
+.auth-hero-figure img{width:min(100%,420px);height:auto;display:block;filter:drop-shadow(0 24px 50px rgba(0,0,0,.35));animation:lucyFloat 4.8s ease-in-out infinite}
+.auth-hero-note{margin-top:8px;font-size:12px;color:#9aa8c2;text-align:center;position:relative;z-index:1}
+@keyframes lucyFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+.auth-card{width:100%;max-width:430px;justify-self:center}
+.auth-card .auth-mark{margin-inline:auto;margin-bottom:18px}
+.auth-card h1,.auth-card p{text-align:center}
+.auth-card form{text-align:right}
+@media(max-width:920px){.auth-shell{grid-template-columns:1fr;max-width:620px}.auth-hero{min-height:auto;padding:24px}.auth-hero-figure img{width:min(100%,340px)}.auth-card{max-width:100%}}
+@media(max-width:700px){.auth-hero-copy h2{font-size:24px}.auth-hero-copy p{font-size:13px}.auth-hero{padding:20px 18px 14px;border-radius:22px}}
+
 </style>
 </head>
 <body>
-<div class="auth-screen" id="authScreen"><div class="auth-card">
-  <div class="auth-mark">م</div><h1>مساحة مهامي</h1>
-  <p>مساحتك الخاصة لتنظيم الحياة والعمل والمال. سجّل الدخول للوصول إلى بياناتك المتزامنة بأمان.</p>
-  <form id="loginForm"><label for="loginEmail">البريد الإلكتروني</label><input class="field" type="email" id="loginEmail" autocomplete="username" required placeholder="name@example.com">
-  <label for="loginPassword">كلمة المرور</label><input class="field" id="loginPassword" type="password" autocomplete="current-password" required placeholder="••••••••">
-  <button class="btn btn-primary" id="loginButton" type="submit">تسجيل الدخول بأمان</button></form>
-  <p class="auth-msg" id="loginMessage">جارٍ الاتصال بخدمة تسجيل الدخول…</p>
-  <p style="font-size:11px;margin-bottom:0">حساب شخصي خاص • لا يوجد تسجيل مستخدمين جدد من الموقع</p>
+<div class="auth-screen" id="authScreen"><div class="auth-shell">
+  <section class="auth-hero" aria-label="ترحيب لوسي">
+    <div class="auth-hero-copy">
+      <span class="auth-kicker">لوسي ترحّب بك</span>
+      <h2>أهلاً بك في <span style="color:var(--accent2)">مساحة مهامي</span></h2>
+      <p>قبل ما تبدأ يومك، لوسي موجودة حتى تستقبلك بابتسامة لطيفة وتذكّرك إن التنظيم الهادئ يصنع فرقاً كبيراً.</p>
+    </div>
+    <div class="auth-hero-figure">
+      <img src="./lucy-welcome.webp" alt="لوسي ترحب بك في مساحة مهامي">
+    </div>
+    <div class="auth-hero-note">شخصية الموقع اللطيفة: لوسي 🐱</div>
+  </section>
+  <div class="auth-card">
+    <div class="auth-mark">م</div><h1>مساحة مهامي</h1>
+    <p>مساحتك الخاصة لتنظيم الحياة والعمل والمال. سجّل الدخول للوصول إلى بياناتك المتزامنة بأمان.</p>
+    <form id="loginForm"><label for="loginEmail">البريد الإلكتروني</label><input class="field" type="email" id="loginEmail" autocomplete="username" required placeholder="name@example.com">
+    <label for="loginPassword">كلمة المرور</label><input class="field" id="loginPassword" type="password" autocomplete="current-password" required placeholder="••••••••">
+    <button class="btn btn-primary" id="loginButton" type="submit">تسجيل الدخول بأمان</button></form>
+    <p class="auth-msg" id="loginMessage">جارٍ الاتصال بخدمة تسجيل الدخول…</p>
+    <p style="font-size:11px;margin-bottom:0;text-align:center">حساب شخصي خاص • لا يوجد تسجيل مستخدمين جدد من الموقع</p>
+  </div>
 </div></div>
 <div class="app">
 <aside class="sidebar">
