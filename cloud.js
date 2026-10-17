@@ -7,10 +7,10 @@
   const $ = id => document.getElementById(id);
   const api = window.mahamSyncAPI;
   const keys = ['mt_tasks', 'mt_projects', 'mt_notes', 'mt_fin_transactions', 'mt_fin_goals', 'mt_fin_budgets'];
-  const blank = () => ({ tasks:[], projects:[], notes:'', transactions:[], financeGoals:[], financeBudgets:{} });
+  const blank = () => ({ tasks:[], projects:[], notes:'', transactions:[], financeGoals:[], financeBudgets:{}, financeRows:[] });
   const copy = value => JSON.parse(JSON.stringify(value));
   const equal = (a,b) => JSON.stringify(a) === JSON.stringify(b);
-  const meaningful = d => !!(d.tasks?.length || d.transactions?.length || d.financeGoals?.length || String(d.notes||'').trim() || Object.keys(d.financeBudgets||{}).length || (d.projects||[]).some(p=>!['work','personal'].includes(p.id)));
+  const meaningful = d => !!(d.financeRows?.length || d.tasks?.length || d.transactions?.length || d.financeGoals?.length || String(d.notes||'').trim() || Object.keys(d.financeBudgets||{}).length || (d.projects||[]).some(p=>!['work','personal'].includes(p.id)));
   const validate = d => d && typeof d === 'object' && Array.isArray(d.tasks) && Array.isArray(d.projects) && Array.isArray(d.transactions) && Array.isArray(d.financeGoals) && typeof d.notes === 'string' && d.financeBudgets && typeof d.financeBudgets === 'object';
   let client=null, user=null, revision=0, baseline=blank(), timer=null, busy=false, dirty=false, loading=false, syncEpoch=0;
   let polling=null;
@@ -19,10 +19,10 @@
   function hideApp() { document.body.classList.remove('authenticated'); $('accountLabel').textContent = ''; }
   function showApp() { document.body.classList.add('authenticated'); $('accountLabel').textContent = user?.email || 'حسابي'; }
   function cachePending(d) {
-    try { localStorage.setItem('mt_tasks', JSON.stringify(d.tasks)); localStorage.setItem('mt_projects', JSON.stringify(d.projects)); localStorage.setItem('mt_notes', d.notes);
+    try { if(user)localStorage.setItem('mt_pending_'+user.id,JSON.stringify(d)); localStorage.setItem('mt_tasks', JSON.stringify(d.tasks)); localStorage.setItem('mt_projects', JSON.stringify(d.projects)); localStorage.setItem('mt_notes', d.notes);
       localStorage.setItem('mt_fin_transactions', JSON.stringify(d.transactions)); localStorage.setItem('mt_fin_goals', JSON.stringify(d.financeGoals)); localStorage.setItem('mt_fin_budgets', JSON.stringify(d.financeBudgets)); } catch(e) { status('⚠️ التخزين المحلي ممتلئ'); }
   }
-  function clearPending() { try { keys.forEach(k=>localStorage.removeItem(k)); } catch(e) {} }
+  function clearPending() { try { if(user)localStorage.removeItem('mt_pending_'+user.id); keys.forEach(k=>localStorage.removeItem(k)); } catch(e) {} }
   // Three-way merge: preserve edits made on either device, including deletions.
   function mergeList(base, mine, theirs) {
     const map = list => new Map((list||[]).filter(x=>x && x.id != null).map(x=>[String(x.id),x]));
@@ -46,14 +46,14 @@
   }
   function merge(base,mine,theirs) {
     const out=blank();
-    for(const key of ['tasks','projects','transactions','financeGoals'])out[key]=mergeList(base[key],mine[key],theirs[key]);
+    for(const key of ['tasks','projects','transactions','financeGoals','financeRows'])out[key]=mergeList(base[key],mine[key],theirs[key]);
     out.notes=mine.notes!==base.notes ? mine.notes : theirs.notes;
     out.financeBudgets=mergeObj(base.financeBudgets,mine.financeBudgets,theirs.financeBudgets);
     return out;
   }
   function mergeInitial(local,remote) {
     const combined=blank();
-    for(const key of ['tasks','projects','transactions','financeGoals']) {
+    for(const key of ['tasks','projects','transactions','financeGoals','financeRows']) {
       const cloudItems=remote[key]||[], ids=new Set(cloudItems.map(x=>String(x.id)));
       combined[key]=[...cloudItems,...(local[key]||[]).filter(x=>!ids.has(String(x.id)))];
     }
@@ -69,7 +69,7 @@
     return { data:raw, revision:Number(data?.revision||0) };
   }
   function schedule(delay=650) {
-    dirty=true; status('⏳ جاري الحفظ…');
+    dirty=true; cachePending(api.snapshot()); status('⏳ جاري الحفظ…');
     clearTimeout(timer);
     timer=setTimeout(()=>void flush(),delay);
   }
@@ -123,7 +123,12 @@
     $('loginButton').disabled=true;
     authMessage('جارٍ تحميل بياناتك الخاصة…');
     try {
-      const local=copy(api.snapshot()); // Original, pre-cloud localStorage state or unsynced changes.
+      let local=blank();
+      const owner=localStorage.getItem('mt_cache_owner');
+      if(!owner || owner===user.id)local=copy(api.snapshot());
+      const pending=localStorage.getItem('mt_pending_'+user.id);
+      if(pending)local=JSON.parse(pending);
+      localStorage.setItem('mt_cache_owner',user.id);
       const remote=await fetchCloud();
       if(epoch!==syncEpoch)return;
       revision=remote.revision; baseline=copy(remote.data);
@@ -143,7 +148,7 @@
       }
       api.apply(combined);
       loading=false; showApp(); authMessage('');
-      if(revision===0 || !equal(combined,remote.data)) {cachePending(combined);schedule(100);}
+      if(revision===0 || !equal(api.snapshot(),remote.data)) {cachePending(api.snapshot());schedule(100);}
       else {clearPending();try{localStorage.setItem('mt_cloud_base_'+user.id,JSON.stringify(remote.data));}catch(e){}status('✓ متصل بالسحابة');}
       if(polling)clearInterval(polling);
       polling=setInterval(()=>void refresh(),12000);
@@ -163,7 +168,7 @@
       const {error}=await client.auth.signOut();if(error)throw error;
       syncEpoch++; user=null;revision=0;baseline=blank();dirty=false;clearTimeout(timer);
       if(polling)clearInterval(polling);
-      hideApp();$('loginForm').reset();authMessage('تم تسجيل الخروج.');
+      api.apply(blank());clearPending();hideApp();$('loginForm').reset();authMessage('تم تسجيل الخروج.');
     } catch(e) {alert('تعذّر تسجيل الخروج: '+(e.message||''));}
     $('logoutBtn').disabled=false;
   }
@@ -193,7 +198,7 @@
     try {
       client=window.supabase.createClient(PROJECT_URL,PUBLIC_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
       client.auth.onAuthStateChange((event,session)=>{
-        if(event==='SIGNED_OUT') {syncEpoch++;user=null;hideApp();if(polling)clearInterval(polling);}
+        if(event==='SIGNED_OUT') {syncEpoch++;user=null;api.apply(blank());hideApp();if(polling)clearInterval(polling);}
         else if((event==='SIGNED_IN'||event==='TOKEN_REFRESHED') && session?.user && !user)
           setTimeout(()=>void activate(session),0);
       });

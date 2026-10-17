@@ -242,7 +242,7 @@ document.body.addEventListener('click',e=>{const el=e.target.closest('button,[da
 $('addTaskBtn').addEventListener('click',()=>newTask());$('addProjectBtn').addEventListener('click',()=>openModal('projectModal'));$('prevMonth').addEventListener('click',()=>{calendarDate.setMonth(calendarDate.getMonth()-1);renderCalendar()});$('nextMonth').addEventListener('click',()=>{calendarDate.setMonth(calendarDate.getMonth()+1);renderCalendar()});
 ['searchTasks','filterStatus','filterPriority','filterProject'].forEach(id=>$(id).addEventListener(id==='searchTasks'?'input':'change',renderTasks));
 $('notesText').value=notes;$('notesText').addEventListener('input',()=>{notes=$('notesText').value;save();$('noteSaved').textContent='يتم الحفظ تلقائياً ✓'});$('clearNotes').addEventListener('click',()=>{if(confirm('هل تريد مسح كل الملاحظات؟')){$('notesText').value='';notes='';save();toast('تم مسح الملاحظات')}});
-$('exportBtn').addEventListener('click',()=>{const data={exportedAt:new Date().toISOString(),tasks,projects,notes,transactions,financeGoals,financeBudgets};const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='maham-backup-'+todayISO()+'.json';a.click();URL.revokeObjectURL(a.href);toast('تم تجهيز نسخة احتياطية')});
+$('exportBtn').addEventListener('click',()=>{const data={exportedAt:new Date().toISOString(),...window.mahamSyncAPI.snapshot()};const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='maham-backup-'+todayISO()+'.json';a.click();URL.revokeObjectURL(a.href);toast('تم تجهيز نسخة احتياطية')});
 $('importBtn').addEventListener('click',()=>$('importFile').click());
 $('importFile').addEventListener('change',async e=>{
  const file=e.target.files?.[0];if(!file)return;
@@ -250,57 +250,14 @@ $('importFile').addEventListener('change',async e=>{
   const data=JSON.parse(await file.text());
   if(!data||!Array.isArray(data.tasks)||!Array.isArray(data.projects)||typeof data.notes!=='string'||(data.transactions!==undefined&&!Array.isArray(data.transactions))||(data.financeGoals!==undefined&&!Array.isArray(data.financeGoals))||(data.financeBudgets!==undefined&&(!data.financeBudgets||typeof data.financeBudgets!=='object'||Array.isArray(data.financeBudgets))))throw new Error('ملف غير متوافق');
   if(!confirm('استيراد النسخة الاحتياطية سيستبدل البيانات الحالية ثم يزامنها مع السحابة. هل تريد المتابعة؟'))return;
-  tasks=data.tasks;projects=data.projects;notes=data.notes;transactions=data.transactions||[];financeGoals=data.financeGoals||[];financeBudgets=data.financeBudgets||{};
+  tasks=data.tasks;projects=data.projects;notes=data.notes;transactions=data.transactions||[];financeGoals=data.financeGoals||[];financeBudgets=data.financeBudgets||{};if(window.financeImport)window.financeImport(data);
   save();$('notesText').value=notes;render();toast('تم استيراد البيانات بنجاح');
  }catch(err){toast('فشل الاستيراد: تأكد من صحة ملف النسخة الاحتياطية')}
  finally{e.target.value=''}
 });
 document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',()=>closeModal(b.dataset.close)));document.querySelectorAll('.modal-backdrop').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)closeModal(m.id)}));document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.modal-backdrop.open').forEach(m=>closeModal(m.id))});
 
-const FIN_CATS={expense:['طعام ومشروبات','منزل وسكن','فواتير','مواصلات','تسوّق','صحة','تعليم','ترفيه','عائلة','عمل ومشروع','أخرى'],income:['راتب','عمل إضافي','مشروع تجاري','هدايا','استثمار','أخرى']};
-const FIN_KIND={project:'مشروع مستقبلي',saving:'هدف ادخار',purchase:'شراء مخطط'};
-const FIN_STATUS={idea:'فكرة',planning:'قيد التخطيط',active:'قيد التنفيذ',done:'مكتمل'};
-function money(n,c){const amount=Number(n)||0;return new Intl.NumberFormat('en-US',{maximumFractionDigits:2,minimumFractionDigits:0}).format(amount)+' '+(c||'SYP')}
-function finMonth(){return $('financeMonth').value||todayISO().slice(0,7)}
-function finCurrency(){return $('financeCurrency').value}
-function finBudgetKey(){return finMonth()+'|'+finCurrency()}
-function filteredTransactions(){return transactions.filter(t=>t.date?.slice(0,7)===finMonth()&&t.currency===finCurrency())}
-function setTransactionCategories(selected){const current=selected||$('transactionCategory').value;const list=FIN_CATS[$('transactionType').value]||FIN_CATS.expense;$('transactionCategory').innerHTML=list.map(x=>`<option value="${safe(x)}">${safe(x)}</option>`).join('');if(list.includes(current))$('transactionCategory').value=current}
-function showTransaction(id){const t=id?transactions.find(t=>t.id===id):null;$('transactionForm').reset();$('transactionId').value=t?.id||'';$('transactionModalTitle').textContent=t?'تعديل الحركة المالية':'حركة مالية جديدة';$('transactionType').value=t?.type||'expense';$('transactionAmount').value=t?.amount||'';$('transactionCurrency').value=t?.currency||finCurrency();$('transactionDate').value=t?.date||todayISO();$('transactionTitle').value=t?.title||'';setTransactionCategories(t?.category);$('transactionNote').value=t?.note||'';openModal('transactionModal')}
-function showGoal(id){const g=id?financeGoals.find(g=>g.id===id):null;$('goalForm').reset();$('goalId').value=g?.id||'';$('goalModalTitle').textContent=g?'تعديل الخطة المالية':'خطة مالية مستقبلية';$('goalTitle').value=g?.title||'';$('goalKind').value=g?.kind||'project';$('goalStatus').value=g?.status||'idea';$('goalTarget').value=g?.target||'';$('goalSaved').value=g?.saved??0;$('goalCurrency').value=g?.currency||finCurrency();$('goalDue').value=g?.due||'';$('goalDesc').value=g?.desc||'';openModal('goalModal')}
-function renderFinance(){
- const currency=finCurrency(),month=finMonth(),items=filteredTransactions();
- const income=items.filter(t=>t.type==='income').reduce((n,t)=>n+Number(t.amount||0),0),expenses=items.filter(t=>t.type==='expense').reduce((n,t)=>n+Number(t.amount||0),0),net=income-expenses;
- $('finIncome').textContent=money(income,currency);$('finExpenses').textContent=money(expenses,currency);$('finNet').textContent=money(net,currency);$('finNet').classList.toggle('fin-negative',net<0);$('finNet').classList.toggle('fin-positive',net>=0);
- const budget=Number(financeBudgets[finBudgetKey()]||0),remaining=budget-expenses;
- $('budgetAmount').value=budget||'';
- $('finBudgetRemain').textContent=budget>0?money(remaining,currency):'—';$('finBudgetRemain').classList.toggle('fin-negative',budget>0&&remaining<0);$('finBudgetRemain').classList.toggle('fin-positive',budget>0&&remaining>=0);
- $('finBudgetNote').textContent=budget>0?remaining<0?'تجاوزت الميزانية المحددة':'من ميزانية الشهر الحالية':'لم تحدد ميزانية لهذا الشهر';
- $('finBudgetBar').style.width=budget>0?Math.min(100,expenses/budget*100)+'%':'0%';$('finBudgetUsed').textContent=budget>0?`${money(expenses,currency)} من ${money(budget,currency)}`:'لم تحدد ميزانية';$('finBudgetPct').textContent=budget>0?Math.round(expenses/budget*100)+'%':'';
- const q=$('financeSearch').value.trim().toLowerCase(),typ=$('financeTypeFilter').value;
- const visible=items.filter(t=>(typ==='all'||t.type===typ)&&(!q||(t.title+' '+t.category+' '+(t.note||'')).toLowerCase().includes(q))).sort((a,b)=>b.date.localeCompare(a.date)||String(b.id).localeCompare(String(a.id)));
- $('finTransactionList').innerHTML=visible.length?visible.map(t=>`<div class="fin-item"><div class="fin-sign ${t.type==='income'?'income':''}">${t.type==='income'?'↙':'↗'}</div><div class="fin-details"><strong>${safe(t.title)}</strong><span>${safe(t.category)} · ${dateLabel(t.date)}${t.note?' · '+safe(t.note):''}</span></div><div class="fin-amount ${t.type==='income'?'fin-positive':'fin-negative'}">${t.type==='income'?'+':'−'}${money(t.amount,t.currency)}</div><div class="fin-action"><button class="icon-btn" data-edit-fin="${safe(t.id)}" title="تعديل">✎</button><button class="icon-btn" data-del-fin="${safe(t.id)}" title="حذف">×</button></div></div>`).join(''):'<div class="empty"><b>◈</b>ما في حركات مسجّلة ضمن خيارات العرض.</div>';
- const breakdown={};items.filter(t=>t.type==='expense').forEach(t=>breakdown[t.category]=(breakdown[t.category]||0)+Number(t.amount||0));const cats=Object.entries(breakdown).sort((a,b)=>b[1]-a[1]);
- $('finBreakdown').innerHTML=cats.length?cats.map(([name,total])=>`<div><div class="fin-bar-top"><span>${safe(name)}</span><span>${money(total,currency)} · ${expenses?Math.round(total/expenses*100):0}%</span></div><div class="fin-track"><div class="fin-fill" style="width:${expenses?Math.min(100,total/expenses*100):0}%"></div></div></div>`).join(''):'<div class="empty">أضف مصروفاً لتظهر هنا تفاصيل الإنفاق.</div>';
- $('finGoalList').innerHTML=financeGoals.length?financeGoals.slice().sort((a,b)=>(a.status==='done')-(b.status==='done')||String(a.due||'9999').localeCompare(String(b.due||'9999'))).map(g=>{const amount=Number(g.target)||0,saved=Number(g.saved)||0,pct=amount?Math.round(saved/amount*100):0;return `<article class="fin-goal"><div class="fin-goal-top"><span class="fin-tag">${FIN_KIND[g.kind]||'خطة'} · ${FIN_STATUS[g.status]||'فكرة'}</span><div><button class="icon-btn" data-edit-goal="${safe(g.id)}" title="تعديل">✎</button><button class="icon-btn" data-del-goal="${safe(g.id)}" title="حذف">×</button></div></div><h4>${safe(g.title)}</h4><p>${safe(g.desc||'أضف تفاصيل وخطوات تنفيذ المشروع وقت ما تحب.')}</p><div class="fin-goal-stats"><span>المدّخر: <b>${money(saved,g.currency)}</b></span><span>${amount?pct+'%':'—'}</span></div><div class="fin-track"><div class="fin-fill" style="width:${Math.min(100,pct)}%"></div></div><div class="fin-goal-foot"><span>المطلوب: ${amount?money(amount,g.currency):'لم يُحدّد بعد'}</span><span>${g.due?'الموعد: '+dateLabel(g.due):'بدون موعد محدد'}</span></div></article>`}).join(''):'<div class="panel" style="grid-column:1/-1;text-align:center"><div class="empty"><b>◎</b>ما في خطط مضافة بعد. أضف مشروعك المستقبلي الأول وحدد تكلفته والموعد المستهدف.</div></div>';
-}
-$('financeMonth').value=todayISO().slice(0,7);
-$('transactionType').addEventListener('change',()=>setTransactionCategories());
-['financeCurrency','financeMonth','financeTypeFilter'].forEach(id=>$(id).addEventListener('change',renderFinance));
-$('financeSearch').addEventListener('input',renderFinance);
-$('openTransactionBtn').addEventListener('click',()=>showTransaction());
-$('openGoalBtn').addEventListener('click',()=>showGoal());
-$('addGoalBtn').addEventListener('click',()=>showGoal());
-$('allFinanceBtn').addEventListener('click',()=>{$('financeTypeFilter').value='all';$('financeSearch').value='';renderFinance();});
-$('saveBudgetBtn').addEventListener('click',()=>{const raw=$('budgetAmount').value.trim(),amt=Number(raw||0);if(!Number.isFinite(amt)||amt<0){toast('أدخل ميزانية صحيحة');return;}if(amt>0)financeBudgets[finBudgetKey()]=amt;else delete financeBudgets[finBudgetKey()];save();renderFinance();toast('تم حفظ ميزانية الشهر')});
-$('transactionForm').addEventListener('submit',e=>{e.preventDefault();const amount=Number($('transactionAmount').value),id=$('transactionId').value,date=$('transactionDate').value,title=$('transactionTitle').value.trim();if(!Number.isFinite(amount)||amount<=0||!date||!title){toast('راجع المبلغ والتاريخ والوصف');return;}const t={id:id||uid(),type:$('transactionType').value,amount,currency:$('transactionCurrency').value,date,title,category:$('transactionCategory').value,note:$('transactionNote').value.trim()};if(id)transactions=transactions.map(x=>x.id===id?t:x);else transactions.push(t);save();closeModal('transactionModal');$('financeCurrency').value=t.currency;$('financeMonth').value=t.date.slice(0,7);renderFinance();toast(id?'تم تعديل الحركة المالية':'تم تسجيل الحركة المالية')});
-$('goalForm').addEventListener('submit',e=>{e.preventDefault();const target=Number($('goalTarget').value||0),saved=Number($('goalSaved').value||0),title=$('goalTitle').value.trim(),id=$('goalId').value;if(!title||!Number.isFinite(target)||target<0||!Number.isFinite(saved)||saved<0){toast('تحقق من مبالغ الخطة واسمها');return;}const g={id:id||uid(),title,kind:$('goalKind').value,status:$('goalStatus').value,target,saved,currency:$('goalCurrency').value,due:$('goalDue').value,desc:$('goalDesc').value.trim()};if(id)financeGoals=financeGoals.map(x=>x.id===id?g:x);else financeGoals.push(g);save();closeModal('goalModal');renderFinance();toast(id?'تم تحديث الخطة':'تمت إضافة الخطة')});
-document.body.addEventListener('click',e=>{const b=e.target.closest('[data-edit-fin],[data-del-fin],[data-edit-goal],[data-del-goal]');if(!b)return;
- if(b.dataset.editFin)showTransaction(b.dataset.editFin);
- if(b.dataset.delFin){const t=transactions.find(x=>x.id===b.dataset.delFin);if(t&&confirm(`حذف الحركة «${t.title}»؟`)){transactions=transactions.filter(x=>x.id!==t.id);save();renderFinance();toast('تم حذف الحركة')}}
- if(b.dataset.editGoal)showGoal(b.dataset.editGoal);
- if(b.dataset.delGoal){const g=financeGoals.find(x=>x.id===b.dataset.delGoal);if(g&&confirm(`حذف الخطة «${g.title}»؟`)){financeGoals=financeGoals.filter(x=>x.id!==g.id);save();renderFinance();toast('تم حذف الخطة')}}
-});
+function renderFinance(){if(window.financeRender)window.financeRender();}
 
 window.mahamSyncAPI={
  snapshot:()=>({tasks,projects,notes,transactions,financeGoals,financeBudgets}),
@@ -310,6 +267,8 @@ $('todayLabel').textContent=new Date().toLocaleDateString('ar',{weekday:'long',d
 })();
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="./cloud.js"></script>
+<script src="./finance-core.js"></script>
+<script src="./finance.js"></script>
+<script src="./cloud.js?v=finance2"></script>
 </body>
 </html>
